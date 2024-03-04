@@ -1,4 +1,4 @@
-use rand::{rngs::ThreadRng, Rng};
+use rand::seq::SliceRandom;
 use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource};
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -10,15 +10,48 @@ struct Maze {
 
 impl Maze {
     fn new(width: u32, height: u32) -> Maze {
-        Maze {
+        let mut maze = Maze {
             width,
             height,
             open_walls: HashSet::new(),
+        };
+        let mut rng = rand::thread_rng();
+        let mut walls = HashSet::new();
+        for x in 0..width {
+            for y in 0..height {
+                if x > 0 {
+                    walls.insert(Self::sort_wall(x, y, x - 1, y));
+                }
+                if x < width - 1 {
+                    walls.insert(Self::sort_wall(x, y, x + 1, y));
+                }
+                if y > 0 {
+                    walls.insert(Self::sort_wall(x, y, x, y - 1));
+                }
+                if y < height - 1 {
+                    walls.insert(Self::sort_wall(x, y, x, y + 1));
+                }
+            }
+        }
+        let mut walls = walls
+            .into_iter()
+            .collect::<Vec<(u32, u32, u32, u32)>>();
+        walls.shuffle(&mut rng);
+        maze.gen(walls);
+        maze
+    }
+
+    fn sort_wall(x1: u32, y1: u32, x2: u32, y2: u32) -> (u32, u32, u32, u32) {
+        if x1 > x2 || (x1 == x2 && y1 > y2) {
+            (x2, y2, x1, y1)
+        } else {
+            (x1, y1, x2, y2)
         }
     }
 
-    fn open_wall(&mut self, x1: u32, y1: u32, x2: u32, y2: u32) -> bool {
-        self.open_walls.insert((x1, y1, x2, y2)) && self.open_walls.insert((x2, y2, x1, y1))
+    fn open_wall(&mut self, x1: u32, y1: u32, x2: u32, y2: u32) {
+        self.open_walls.insert((x1, y1, x2, y2));
+        self.open_walls.insert((x2, y2, x1, y1));
     }
 
     fn is_wall_open(&self, x1: u32, y1: u32, x2: u32, y2: u32) -> bool {
@@ -50,20 +83,12 @@ impl Maze {
         false
     }
 
-    fn gen(&mut self, rng: &mut ThreadRng) {
-        while !self.is_dest_reachable() {
-            while !{
-                let x = rng.gen_range(0..self.width);
-                let y = rng.gen_range(0..self.height);
-                let direction = rng.gen_range(0..4);
-                match direction {
-                    0 if x > 0 => self.open_wall(x, y, x - 1, y),
-                    1 if x < self.width - 1 => self.open_wall(x, y, x + 1, y),
-                    2 if y > 0 => self.open_wall(x, y, x, y - 1),
-                    3 if y < self.height - 1 => self.open_wall(x, y, x, y + 1),
-                    _ => false,
-                }
-            } {}
+    fn gen(&mut self, walls: Vec<(u32, u32, u32, u32)>) {
+        for (x1, y1, x2, y2) in walls {
+            if self.is_dest_reachable() {
+                break;
+            }
+            self.open_wall(x1, y1, x2, y2);
         }
     }
 
@@ -213,8 +238,6 @@ impl Maze {
 }
 
 fn main() {
-    let mut rng = rand::thread_rng();
-    let mut maze = Maze::new(50, 40);
-    maze.gen(&mut rng);
+    let maze = Maze::new(50, 40);
     maze.show();
 }
