@@ -1,6 +1,7 @@
 use rand::seq::SliceRandom;
 use raqote::{DrawOptions, DrawTarget, PathBuilder, SolidSource};
 use std::collections::{HashMap, HashSet, VecDeque};
+use tqdm::tqdm;
 
 struct Maze {
     width: u32,
@@ -33,11 +34,11 @@ impl Maze {
                 }
             }
         }
-        let mut walls = walls
-            .into_iter()
-            .collect::<Vec<(u32, u32, u32, u32)>>();
+        let mut walls = walls.into_iter().collect::<Vec<(u32, u32, u32, u32)>>();
         walls.shuffle(&mut rng);
+        println!("- Walls shuffled");
         maze.gen(walls);
+        println!("- Maze generated");
         maze
     }
 
@@ -84,11 +85,11 @@ impl Maze {
     }
 
     fn gen(&mut self, walls: Vec<(u32, u32, u32, u32)>) {
-        for (x1, y1, x2, y2) in walls {
+        for (x1, y1, x2, y2) in tqdm(walls.iter()) {
             if self.is_dest_reachable() {
                 break;
             }
-            self.open_wall(x1, y1, x2, y2);
+            self.open_wall(*x1, *y1, *x2, *y2);
         }
     }
 
@@ -128,6 +129,9 @@ impl Maze {
     }
 
     fn show(&self) {
+        let short_path = self.get_short_path();
+        println!("- Shortest path found");
+
         let cell_size = 50.;
         let mut dt = DrawTarget::new(
             self.width as i32 * cell_size as i32,
@@ -201,9 +205,9 @@ impl Maze {
             },
             &DrawOptions::new(),
         );
+        println!("- Maze drawn");
 
         let mut pb = PathBuilder::new();
-        let short_path = self.get_short_path();
         for (i, (x, y)) in short_path.iter().enumerate() {
             if i == 0 {
                 pb.move_to(
@@ -232,12 +236,13 @@ impl Maze {
             },
             &DrawOptions::new(),
         );
+        println!("- Path drawn");
 
         dt.write_png("out.png").unwrap()
     }
 }
 
 fn main() {
-    let maze = Maze::new(50, 40);
+    let maze = Maze::new(500, 200);
     maze.show();
 }

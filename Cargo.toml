@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 rand = "0.8.5"
 raqote = "0.8.3"
+tqdm = "0.6.0"
